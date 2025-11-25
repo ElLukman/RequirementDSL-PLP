@@ -1,0 +1,50 @@
+// File: simulasi.req
+// Studi Kasus: Sistem Presensi Kuliah Menggunakan QR Code
+// Tujuan: Memastikan logika validasi waktu dan aktor berjalan benar.
+
+// 1. Definisikan siapa saja yang terlibat (Actors)
+def_actor Dosen;
+def_actor Mahasiswa;
+def_actor ServerPusat;
+
+// 2. Fitur Pertama: Dosen Membuka Kelas
+def_feature GenerateQRCode {
+    
+    scenario "Dosen membuka kelas tepat waktu" {
+        given "Waktu saat ini sesuai jadwal mata kuliah";
+        when "Dosen menekan tombol 'Generate QR'";
+        then "Sistem menampilkan QR Code dinamis";
+        then "Status kelas berubah menjadi 'OPEN'";
+    }
+
+    scenario "Dosen membuka kelas di luar jadwal" {
+        given "Waktu saat ini diluar jadwal mata kuliah";
+        when "Dosen menekan tombol 'Generate QR'";
+        then "Sistem menampilkan peringatan 'Jadwal tidak sesuai'";
+    }
+}
+
+// 3. Fitur Kedua: Mahasiswa Melakukan Scan (Inti Validasi)
+def_feature ScanPresensi {
+    scenario "Mahasiswa scan tepat waktu" {
+        given "Status kelas adalah 'OPEN'";
+        given "Jarak GPS Mahasiswa < 50 meter dari Dosen";
+        when "Mahasiswa scan QR Code";
+        then "Sistem mencatat status kehadiran 'HADIR'";
+        then "Notifikasi 'Berhasil Absen' muncul di HP Mahasiswa";
+    }
+
+    scenario "Mahasiswa scan tapi jarak terlalu jauh (Titip Absen)" {
+        given "Status kelas adalah 'OPEN'";
+        given "Jarak GPS Mahasiswa > 100 meter dari Dosen";
+        when "Mahasiswa scan QR Code dari foto teman";
+        then "Sistem menolak presensi";
+        then "Sistem menampilkan error 'Lokasi Anda Terlalu Jauh'";
+    }
+
+    scenario "Mahasiswa scan saat kelas sudah ditutup" {
+        given "Status kelas adalah OPEN";
+        when "Mahasiswa scan QR Code setelah sudah ditutup";
+        then "Sistem menolak presensi";
+    }
+}
