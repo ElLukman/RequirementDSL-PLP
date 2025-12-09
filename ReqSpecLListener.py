@@ -26,6 +26,33 @@ class ReqSpecLListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by ReqSpecLParser#var_def.
+    def enterVar_def(self, ctx:ReqSpecLParser.Var_defContext):
+        pass
+
+    # Exit a parse tree produced by ReqSpecLParser#var_def.
+    def exitVar_def(self, ctx:ReqSpecLParser.Var_defContext):
+        pass
+
+
+    # Enter a parse tree produced by ReqSpecLParser#endpoint_def.
+    def enterEndpoint_def(self, ctx:ReqSpecLParser.Endpoint_defContext):
+        pass
+
+    # Exit a parse tree produced by ReqSpecLParser#endpoint_def.
+    def exitEndpoint_def(self, ctx:ReqSpecLParser.Endpoint_defContext):
+        pass
+
+
+    # Enter a parse tree produced by ReqSpecLParser#method.
+    def enterMethod(self, ctx:ReqSpecLParser.MethodContext):
+        pass
+
+    # Exit a parse tree produced by ReqSpecLParser#method.
+    def exitMethod(self, ctx:ReqSpecLParser.MethodContext):
+        pass
+
+
     # Enter a parse tree produced by ReqSpecLParser#actor_def.
     def enterActor_def(self, ctx:ReqSpecLParser.Actor_defContext):
         pass
@@ -77,6 +104,15 @@ class ReqSpecLListener(ParseTreeListener):
 
     # Exit a parse tree produced by ReqSpecLParser#then_clause.
     def exitThen_clause(self, ctx:ReqSpecLParser.Then_clauseContext):
+        pass
+
+
+    # Enter a parse tree produced by ReqSpecLParser#error_clause.
+    def enterError_clause(self, ctx:ReqSpecLParser.Error_clauseContext):
+        pass
+
+    # Exit a parse tree produced by ReqSpecLParser#error_clause.
+    def exitError_clause(self, ctx:ReqSpecLParser.Error_clauseContext):
         pass
 
 

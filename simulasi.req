@@ -1,50 +1,79 @@
 // File: simulasi.req
-// Studi Kasus: Sistem Presensi Kuliah Menggunakan QR Code
-// Tujuan: Memastikan logika validasi waktu dan aktor berjalan benar.
+// Deskripsi: Spesifikasi teknis untuk modul Auth dan Event Management
 
-// 1. Definisikan siapa saja yang terlibat (Actors)
-def_actor Dosen;
-def_actor Mahasiswa;
-def_actor ServerPusat;
+// --- 1. CONTEXT DEFINITIONS (State Variables) ---
+// Mengurangi redudansi penulisan kondisi user
+def_context CTX_GUEST       = "User adalah pengunjung tamu (tanpa token)";
+def_context CTX_MEMBER      = "User login sebagai Anggota Gen-BBM (JWT Valid)";
+def_context CTX_ADMIN       = "User login sebagai Pengurus Inti";
+def_context CTX_EVENT_OPEN  = "Kuota Event tersedia dan Pendaftaran dibuka";
+def_context CTX_EVENT_FULL  = "Kuota Event sudah penuh";
 
-// 2. Fitur Pertama: Dosen Membuka Kelas
-def_feature GenerateQRCode {
+// --- 2. API ENDPOINTS (Technical Spec) ---
+def_endpoint API_LOGIN          POST "/api/auth/login";
+def_endpoint API_REGISTER_EVENT POST "/api/events/register";
+def_endpoint API_DOWNLOAD_MAT   GET  "/api/resources/download";
+
+// --- 3. ACTORS ---
+def_actor Pengunjung;
+def_actor Anggota;
+def_actor Admin;
+
+// --- 4. FEATURES ---
+
+def_feature Authentication {
     
-    scenario "Dosen membuka kelas tepat waktu" {
-        given "Waktu saat ini sesuai jadwal mata kuliah";
-        when "Dosen menekan tombol 'Generate QR'";
-        then "Sistem menampilkan QR Code dinamis";
-        then "Status kelas berubah menjadi 'OPEN'";
+    scenario "Login Berhasil sebagai Anggota" {
+        given CTX_GUEST; 
+        when "User hit API_LOGIN dengan email & password valid";
+        then "Server mengembalikan Token JWT";
+        then "Redirect ke Dashboard Member";
     }
 
-    scenario "Dosen membuka kelas di luar jadwal" {
-        given "Waktu saat ini diluar jadwal mata kuliah";
-        when "Dosen menekan tombol 'Generate QR'";
-        then "Sistem menampilkan peringatan 'Jadwal tidak sesuai'";
+    scenario "Login Gagal (Password Salah)" {
+        given CTX_GUEST;
+        when "User hit API_LOGIN dengan password salah";
+        expect_error "401 Unauthorized: Invalid Credentials"; 
     }
 }
 
-// 3. Fitur Kedua: Mahasiswa Melakukan Scan (Inti Validasi)
-def_feature ScanPresensi {
-    scenario "Mahasiswa scan tepat waktu" {
-        given "Status kelas adalah 'OPEN'";
-        given "Jarak GPS Mahasiswa < 50 meter dari Dosen";
-        when "Mahasiswa scan QR Code";
-        then "Sistem mencatat status kehadiran 'HADIR'";
-        then "Notifikasi 'Berhasil Absen' muncul di HP Mahasiswa";
+def_feature EventRegistration {
+    
+    scenario "Anggota Mendaftar Event (Normal)" {
+        given CTX_MEMBER;      
+        given CTX_EVENT_OPEN;  
+        when "User hit API_REGISTER_EVENT dengan EventID";
+        then "Data peserta tersimpan di Database";
+        then "Kirim email konfirmasi tiket ke User";
     }
 
-    scenario "Mahasiswa scan tapi jarak terlalu jauh (Titip Absen)" {
-        given "Status kelas adalah 'OPEN'";
-        given "Jarak GPS Mahasiswa > 100 meter dari Dosen";
-        when "Mahasiswa scan QR Code dari foto teman";
-        then "Sistem menolak presensi";
-        then "Sistem menampilkan error 'Lokasi Anda Terlalu Jauh'";
+    scenario "Anggota Mendaftar saat Kuota Penuh" {
+        given CTX_MEMBER;
+        given CTX_EVENT_FULL;  
+        when "User hit API_REGISTER_EVENT";
+        expect_error "400 Bad Request: Quota Exceeded";
     }
 
-    scenario "Mahasiswa scan saat kelas sudah ditutup" {
-        given "Status kelas adalah OPEN";
-        when "Mahasiswa scan QR Code setelah sudah ditutup";
-        then "Sistem menolak presensi";
+    scenario "Pengunjung Paksa Daftar Tanpa Login (Security Check)" {
+        given CTX_GUEST;       
+        given CTX_EVENT_OPEN;
+        when "User tembak langsung ke API_REGISTER_EVENT";
+        expect_error "403 Forbidden: Token Missing";
+    }
+}
+
+def_feature MaterialAccess {
+
+    scenario "Admin Upload Materi Baru" {
+        given CTX_ADMIN;
+        when "Admin upload file PDF ke Dashboard";
+        then "File tersimpan di Cloud Storage";
+        then "Link download tersedia untuk Anggota";
+    }
+
+    scenario "Anggota Download Materi Eksklusif" {
+        given CTX_MEMBER;
+        when "User request ke API_DOWNLOAD_MAT";
+        then "Browser memulai unduhan file";
     }
 }

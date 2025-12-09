@@ -2,26 +2,61 @@ import sys
 from antlr4 import *
 from ReqSpecLLexer import ReqSpecLLexer
 from ReqSpecLParser import ReqSpecLParser
-from ReqSpecLListener import ReqSpecLListener # Kita panggil Listener bawaan
+from ReqSpecLListener import ReqSpecLListener
 
-# Ini adalah 'Mata-mata' yang akan mencuri data saat Parser membaca file
-class PrinterListener(ReqSpecLListener):
+class SmartListener(ReqSpecLListener):
+    def __init__(self):
+        self.context_vars = {} 
+        self.seen_scenarios = set() 
+        self.current_feature = ""
+
+    def enterVar_def(self, ctx):
+        var_name = ctx.ID().getText()
+        var_value = ctx.STRING().getText().replace('"', '')
+        self.context_vars[var_name] = var_value
+        print(f" [MEMORY] Menyimpan Context: {var_name}")
+
+    def enterEndpoint_def(self, ctx):
+        api_name = ctx.ID().getText()
+        method = ctx.method().getText()
+        url = ctx.STRING().getText()
+        print(f" [API] Endpoint Terdaftar: {api_name} [{method} {url}]")
+
     def enterFeature_def(self, ctx):
-        # Setiap kali ketemu "def_feature", ambil namanya
-        nama_fitur = ctx.ID().getText()
-        print(f"\n[SISTEM] Mendeteksi Fitur Baru: {nama_fitur}")
-        print("=" * 40)
+        self.current_feature = ctx.ID().getText()
+        print(f"\n [FEATURE] Memeriksa Fitur: {self.current_feature}")
+        print("=" * 60)
 
     def enterScenario_def(self, ctx):
-        # Setiap kali ketemu "scenario", ambil teksnya
-        # ctx.STRING() mengambil teks "...", getText() menjadikannya string
-        deskripsi = ctx.STRING().getText()
-        print(f"  --> Menguji Skenario: {deskripsi}")
+        raw_desc = ctx.STRING().getText()
+        
+        unique_key = f"{self.current_feature}_{raw_desc}"
+        if unique_key in self.seen_scenarios:
+            print(f" [CRITICAL ERROR] Skenario Duplikat Terdeteksi: {raw_desc}")
+            print("   Sistem menolak redundansi dalam satu fitur!")
+            sys.exit(1) 
+        else:
+            self.seen_scenarios.add(unique_key)
+            print(f"   Test Case: {raw_desc}")
+
+    def enterGiven_clause(self, ctx):
+        if ctx.STRING():
+            text = ctx.STRING().getText()
+        elif ctx.ID():
+            var_name = ctx.ID().getText()
+            if var_name in self.context_vars:
+                text = f"[{var_name}] {self.context_vars[var_name]}"
+            else:
+                print(f" [ERROR] Variabel '{var_name}' tidak ditemukan!")
+                text = "UNDEFINED"
+        
+        print(f"      Given: {text}")
 
     def exitThen_clause(self, ctx):
-         # Ambil ekspektasi output
-         hasil = ctx.STRING().getText()
-         print(f"     ✅ Harapan Output: {hasil}")
+        print(f"      Expect: {ctx.STRING().getText()}")
+
+    def exitError_clause(self, ctx):
+        print(f"      CAUGHT: {ctx.STRING().getText()} (Negative Test)")
 
 def main(argv):
     input_file = argv[1]
@@ -29,17 +64,18 @@ def main(argv):
     lexer = ReqSpecLLexer(input_stream)
     stream = CommonTokenStream(lexer)
     parser = ReqSpecLParser(stream)
-    
-    # Buat tree
     tree = parser.program()
 
-    # --- BAGIAN AJAIBNYA ---
-    # Kita tempelkan 'Mata-mata' (Listener) ke proses parsing
-    printer = PrinterListener()
+    if parser.getNumberOfSyntaxErrors() > 0:
+        print(" Gagal Parsing: Cek Syntax Error di atas.")
+        return
+
+    printer = SmartListener()
     walker = ParseTreeWalker()
     
-    print(f"MEMPROSES FILE: {input_file}...\n")
-    walker.walk(printer, tree) # Jalankan mata-mata!
+    print(f"--- START VALIDATION: {input_file} ---\n")
+    walker.walk(printer, tree) 
+    print("\n--- VALIDATION FINISHED ---")
 
 if __name__ == '__main__':
     main(sys.argv)
