@@ -1,0 +1,71 @@
+// ============================================================
+// FILE SIMULASI LENGKAP: BANKING SYSTEM
+// Dibuat untuk menguji seluruh fitur bahasa ReqSpecL
+// ============================================================
+
+// 1. DEFINISI AKTOR (Mencakup pengguna dan sistem eksternal)
+def_actor Nasabah;
+def_actor AdminBank;
+def_actor DatabasePusat;
+
+// 2. FITUR PERTAMA: OTENTIKASI & KEAMANAN
+// Fitur ini menguji alur Login -> Akses -> Logout (Stateful Testing)
+def_feature OtentikasiUser {
+
+    // Skenario 001: Login Berhasil (Inisialisasi State)
+    scenario "Nasabah login dengan kredensial valid" {
+        given "Sistem siap menerima input";
+        when "Nasabah memasukkan username dan password benar";
+        // Logic Compiler: SystemState.set('login_status', 'ACTIVE')
+        then "Sistem memvalidasi kredensial";
+        then "Status sesi menjadi 'ACTIVE'";
+    }
+
+    // Skenario 002: Akses Fitur Terlindungi (Bergantung pada Skenario 001)
+    scenario "Nasabah mengakses dashboard akun" {
+        given "Status sesi adalah 'ACTIVE'";
+        // Jika skenario 001 gagal atau belum jalan, ini harus error
+        when "Nasabah membuka halaman dashboard";
+        then "Sistem menampilkan informasi saldo";
+    }
+
+    // Skenario 003: Logout (Mengubah State)
+    scenario "Nasabah melakukan logout" {
+        given "Status sesi adalah 'ACTIVE'";
+        when "Nasabah menekan tombol Logout";
+        // Logic Compiler: SystemState.set('login_status', 'INACTIVE')
+        then "Sistem mengakhiri sesi";
+        then "Status sesi menjadi 'INACTIVE'";
+    }
+
+    // Skenario 004: Akses Ilegal (Negative Test)
+    scenario "Akses dashboard setelah logout" {
+        given "Status sesi adalah 'INACTIVE'";
+        when "Nasabah mencoba membuka halaman dashboard via URL";
+        then "Sistem menolak akses";
+        then "Sistem menampilkan pesan error 'Silakan Login Kembali'";
+    }
+}
+
+// 3. FITUR KEDUA: TRANSAKSI FINANSIAL
+// Menguji fitur independen dengan multiple given/then
+def_feature TransferDana {
+
+    scenario "Transfer antar rekening normal" {
+        given "Status sesi adalah 'ACTIVE'";
+        given "Saldo Nasabah > 500000";
+        given "Rekening tujuan valid";
+        when "Nasabah transfer Rp 100.000 ke teman";
+        then "Sistem mengurangi saldo pengirim";
+        then "Sistem menambah saldo penerima";
+        then "Notifikasi 'Transfer Berhasil' muncul";
+    }
+
+    scenario "Transfer melebihi saldo (Gagal)" {
+        given "Status sesi adalah 'ACTIVE'";
+        given "Saldo Nasabah < 10000";
+        when "Nasabah mencoba transfer Rp 1.000.000";
+        then "Sistem menolak transaksi";
+        then "Peringatan 'Saldo Tidak Cukup' ditampilkan";
+    }
+}
